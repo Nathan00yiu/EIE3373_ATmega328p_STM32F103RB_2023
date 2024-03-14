@@ -1,0 +1,36 @@
+/*
+ * Lab2A_CTC.c
+ *
+ * Created: 28/9/2023 10:40:32 am
+ * Author : 21093734d
+ */ 
+
+#include <avr/io.h>
+
+void ctcdelay()
+{
+	for(int i = 0; i < 16; i++)
+	{		
+		for(int j = 0; j < 10000; j++)
+		{
+			OCR0A = 100; //set OCR0A to 100
+			TCCR0A = 0x02; //set timer0 to CTC mode
+			TCCR0B = 0x01; //set no per-scaler 
+			while((TIFR0&(1<<OCF0A))==0); // when OCF0A = 0 (not overflow), wait 
+			TCCR0B = 0; //reset timer (should it be TCCR0B?
+			TIFR0 = 0x02; //Can it be ignore? No it make the delay longer, data-sheet: reset the ctc mode flag?
+		}
+	}
+}
+int main(void)
+{
+	DDRB = 0xFF; //enable port B as output
+	PORTB &= ~(1<<0); //clear PB0
+	PORTB = PORTB ^ 0x01;
+	while (1)
+	{		
+		ctcdelay();
+		PORTB = PORTB ^ 0x01; //toggle PB0
+	}	
+}
+

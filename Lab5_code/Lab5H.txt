@@ -1,0 +1,237 @@
+#include "stm32f10x.h"                  // Device header
+
+//Lab5H
+//Use an external hardware interrupt to enable the traffic lights
+
+#define BUTTON_RCC_GPIO					RCC_APB2Periph_GPIOC
+#define BUTTON_GPIO							GPIOC
+#define BUTTON_GPIO_PIN					GPIO_Pin_13
+#define BUTTON_EXTI_LINE				EXTI_Line13
+#define BUTTON_GPIO_PORTSOURCE	GPIO_PortSourceGPIOC
+#define BUTTON_GPIO_PINSOURCE		GPIO_PinSource13
+
+int main(void) {
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC, ENABLE); // Enable APB2_B, APB_C
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+	
+	//GPIOB, Pin 0, 1, 2, 5 Set up
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin		= GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_5;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	
+	//GPIOC, Pin 0, 1, 4, 5 Set up
+	GPIO_InitTypeDef GPIO_InitStructure2;
+	GPIO_InitStructure2.GPIO_Pin		= GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5;
+	GPIO_InitStructure2.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure2.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOC, &GPIO_InitStructure2);
+	
+	//Configure I/O for EXTI13
+	GPIO_InitTypeDef GPIO_InitStructure3;
+	GPIO_InitStructure3.GPIO_Pin = BUTTON_GPIO_PIN;
+	GPIO_InitStructure3.GPIO_Mode = GPIO_Mode_IPU;
+	GPIO_InitStructure3.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_Init(BUTTON_GPIO, &GPIO_InitStructure3);
+	
+	//EXTI Configuaration, GUIOC, Pin 13
+	GPIO_EXTILineConfig(BUTTON_GPIO_PORTSOURCE, BUTTON_GPIO_PINSOURCE);
+	EXTI_InitTypeDef EXTI_InitStructure;
+	EXTI_InitStructure.EXTI_Line = BUTTON_EXTI_LINE;
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+	
+	//Enable Interrupt
+	NVIC_InitTypeDef NVIC_InitStructure;
+	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0x02;
+	NVIC_Init(&NVIC_InitStructure);
+	
+	//Timer 2 set up
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+	
+	TIM_TimeBaseInitTypeDef timerInitStructure;
+	timerInitStructure.TIM_Prescaler = 18000-1; //1/(72Mhz/18000)=0.25ms
+	timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	timerInitStructure.TIM_Period = 500-1; //0.25ms*500 = 0.125s
+	timerInitStructure.TIM_ClockDivision = 0; //TIM_CKD_DIV1;
+	timerInitStructure.TIM_RepetitionCounter = 0;
+	TIM_TimeBaseInit(TIM2, &timerInitStructure);
+	TIM_Cmd(TIM2, ENABLE);
+	
+	//Enable update event, interrupt for Timer2
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	NVIC_EnableIRQ(TIM2_IRQn);
+	
+	while(1);
+}
+
+void resetall() //reset all
+{
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_5, Bit_RESET);
+	GPIO_WriteBit(GPIOC, GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5, Bit_RESET);
+}
+void togglePB0() //light 3 red
+{
+	GPIO_WriteBit(GPIOB, GPIO_Pin_0, Bit_SET);
+}
+void togglePB1() //light 3 yellow
+{
+	GPIO_WriteBit(GPIOB, GPIO_Pin_1, Bit_SET);
+}
+void togglePB2() //light 3 green
+{
+	GPIO_WriteBit(GPIOB, GPIO_Pin_2, Bit_SET);
+}
+void togglePB5() //light 2 green
+{
+	GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_SET);
+}
+void togglePC0() //light 2 red
+{
+	GPIO_WriteBit(GPIOC, GPIO_Pin_0, Bit_SET);
+}
+void togglePC1() //light 2 yellow
+{
+	GPIO_WriteBit(GPIOC, GPIO_Pin_1, Bit_SET);
+}
+void togglePC4() //light 1 red
+{
+	GPIO_WriteBit(GPIOC, GPIO_Pin_4, Bit_SET);
+}
+void togglePC5() // light 1 green
+{
+	GPIO_WriteBit(GPIOC, GPIO_Pin_5, Bit_SET);
+}
+void resetPC5()
+{
+	GPIO_WriteBit(GPIOC, GPIO_Pin_5, Bit_RESET);
+}
+char state = 0;
+char lighton = 1;
+void TIM2_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) 
+	{
+		state++;
+		if(lighton == 0)
+		{
+			resetall();
+		}
+		else if(lighton == 1)
+		{
+			if(state == 1) //state 1
+			{
+				resetall();
+				togglePC4();
+				togglePB5();
+				togglePB0();
+			}
+			else if(state == 48) //state 2
+			{
+				resetall();
+				togglePC4();
+				togglePC1();
+				togglePB0();
+			}
+			else if(state == 56) //state 3
+			{
+				resetall();
+				togglePC4();
+				togglePC0();
+				togglePB0();
+			}
+			else if(state == 64) //state 4
+			{
+				resetall();
+				togglePC4();
+				togglePC0();
+				togglePB1();
+				togglePB0();
+			}
+			else if(state == 72) //state 5
+			{
+				resetall();
+				togglePC5();
+				togglePC0();
+				togglePB2();
+			}
+			else if(state == 112) //state 6
+			{
+				resetall();
+				togglePC5();
+				togglePC0();
+				togglePB1();
+			}
+			else if(state == 113) //state 6 green light blinking
+			{
+				resetPC5();
+			}
+			else if(state == 114) //state 6 green light blinking
+			{
+				togglePC5();
+			}
+			else if(state == 115) //state 6 green light blinking
+			{
+				resetPC5();
+			}
+			else if(state == 116) //state 6 green light blinking
+			{
+				togglePC5();
+			}
+			else if(state == 117) //state 6 green light blinking
+			{
+				resetPC5();
+			}
+			else if(state == 118) //state 6 green light blinking
+			{
+				togglePC5();
+			}
+			else if(state == 119) //state 6 green light blinking
+			{
+				resetPC5();
+			}
+			else if(state == 120) //state 7
+			{
+				resetall();
+				togglePC4();
+				togglePC0();
+				togglePB0();
+			}
+			else if(state == 128) //state 8
+			{
+				resetall();
+				togglePC4();
+				togglePC0();
+				togglePC1();
+				togglePB0();
+			}
+			else if(state >= 136)
+			{
+				state = 0;
+				//Rerun
+			}
+		}		
+		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+	}
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(EXTI_Line13) != RESET)
+	{
+		if(lighton == 1)
+		{
+			lighton = 0;
+		}
+		else 
+		{
+			lighton = 1;
+		}
+		EXTI_ClearITPendingBit(EXTI_Line13);
+	}
+}

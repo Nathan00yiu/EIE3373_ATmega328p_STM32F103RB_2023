@@ -1,0 +1,29 @@
+/*
+ * Lab1A.c
+ *
+ * Created: 14/9/2023 10:42:10 am
+ * Author : Lam Ching Yiu 21093734d
+ */ 
+
+#include <avr/io.h>
+
+void delay100ms (void){
+	
+	unsigned int i ;
+	for(i=0; i<42150; i++);
+}
+int main(void)
+{
+    /* Replace with your application code */
+	DDRD = 0xFF; //enable port D as output
+    while (1) 
+    {
+		PORTD = 0x55; //0101 0101
+		delay100ms();
+		delay100ms();
+		PORTD = 0xAA; //1010 1010
+		delay100ms();
+		delay100ms();
+    }
+}
+

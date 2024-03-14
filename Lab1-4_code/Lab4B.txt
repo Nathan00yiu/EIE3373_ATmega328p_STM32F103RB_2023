@@ -1,0 +1,74 @@
+/*
+ * Lab4B.c
+ *
+ * Created: 16/11/2023 9:28:41 am
+ * Author : 21093734d
+ */ 
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+void USART_Init(void)
+{
+	/*Set baud rate */
+	UBRR0H = 0x00; //set baud rate
+	UBRR0L = 0xCF; //set baud rate = 4800
+	/*Enable receiver and transmitter */
+	UCSR0B = (1<<RXEN0)|(1<<TXEN0); //receive enable, transmit enable
+	/* Set frame format: 8data, 1stop bit */
+	UCSR0C = (0<<USBS0)|(3<<UCSZ00); //1 stop bits, character size
+}
+
+void USART_Transmit( unsigned char data )
+{
+	/* Wait for empty transmit buffer */
+	while ( !( UCSR0A & (1<<UDRE0)))  //if UDRE0 is 1, buffer is empty, means ready to be written
+	;
+	/* Put data into buffer, sends the data */
+	UDR0 = data;
+}
+unsigned char USART_Receive( void )
+{
+	/* Wait for data to be received */
+	while ( !(UCSR0A & (1<<RXC0)) ) //if the receive buffer is disable, RXC0 = 0
+	;
+	/* Get and return received data from buffer */
+	return UDR0;
+}
+int main(void)
+{
+	/* Replace with your application code */
+	unsigned char sayready[13] = "We are Ready ";
+	unsigned char readylength = 13;
+	unsigned char input = 0;
+	unsigned char sayhi[4] = "Bye!";
+	unsigned char hilength = 4;
+	unsigned char i = 0;
+	unsigned char start = 0;
+	USART_Init();
+	while (1)
+	{
+		if(start == 0)
+		{
+			start++;
+			for(i = 0; i < readylength; i++)
+			{
+				USART_Transmit(sayready[i]);
+			}	
+		}
+		input = USART_Receive();
+		if(input == 'H')
+		{
+			input = USART_Receive();
+			if(input == 'i')
+			{
+				for(i = 0; i < hilength; i++)
+				{
+					USART_Transmit(sayhi[i]);	
+				}
+			}
+		}	
+	}
+	return 0;
+}
+

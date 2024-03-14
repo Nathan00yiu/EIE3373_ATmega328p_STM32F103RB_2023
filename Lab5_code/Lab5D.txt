@@ -1,0 +1,31 @@
+#include "stm32f10x.h"                  // Device header
+
+//Lab5D
+//Use the on-broad button(PC13) to switch on and off the on-broad LED (PA5)
+
+int main(void) {
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOC, ENABLE); // Enable APB2_A, APB_C
+	
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin		= GPIO_Pin_5;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	
+	GPIO_InitTypeDef GPIO_InitStructure2;
+	GPIO_InitStructure2.GPIO_Pin		= GPIO_Pin_13;
+	GPIO_InitStructure2.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure2.GPIO_Mode  = GPIO_Mode_IPD;
+	GPIO_Init(GPIOC, &GPIO_InitStructure2);
+	
+	while(1) {
+		if(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_13) == RESET)
+		{
+			GPIO_WriteBit(GPIOA, GPIO_Pin_5, Bit_SET);
+		}
+		else
+		{
+			GPIO_WriteBit(GPIOA, GPIO_Pin_5, Bit_RESET);
+		}
+	}
+}

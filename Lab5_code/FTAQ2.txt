@@ -1,0 +1,137 @@
+#include "stm32f10x.h"                  // Device header
+
+
+//FTAQ2
+#define BUTTON_RCC_GPIO RCC_APB2Periph_GPIOA
+#define BUTTON_GPIO GPIOA
+#define BUTTON_GPIO_PIN GPIO_Pin_1
+
+int main(void) {
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC, ENABLE); // Enable APB2_B, APB_C
+	
+	//GPIO clock for I/O (PA1)
+	RCC_APB2PeriphClockCmd(BUTTON_RCC_GPIO, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+	
+	// Configure I/O for PC0
+	GPIO_InitTypeDef GPIO_InitStructure3;
+	GPIO_InitStructure3.GPIO_Pin = GPIO_Pin_0;
+	GPIO_InitStructure3.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_InitStructure3.GPIO_Speed = GPIO_Speed_2MHz;
+	GPIO_Init(GPIOC, &GPIO_InitStructure3);
+	
+	//Timer 2 set up
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+	
+	TIM_TimeBaseInitTypeDef timerInitStructure;
+	timerInitStructure.TIM_Prescaler = 0;
+	timerInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	timerInitStructure.TIM_Period = 2;
+	timerInitStructure.TIM_ClockDivision = 0;
+	timerInitStructure.TIM_RepetitionCounter = 0;
+	TIM_TimeBaseInit(TIM2, &timerInitStructure);
+	TIM_Cmd(TIM2, ENABLE);
+	
+	TIM_TIxExternalClockConfig(TIM2, TIM_TIxExternalCLK1Source_TI2, TIM_ICPolarity_Rising, 0);
+	
+	//Enable update event, interrupt for Timer2
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);	
+	NVIC_EnableIRQ(TIM2_IRQn);	
+	
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Pin		= GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_5;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
+	
+	GPIO_InitTypeDef GPIO_InitStructure2;
+	GPIO_InitStructure2.GPIO_Pin		= GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5;
+	GPIO_InitStructure2.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure2.GPIO_Mode  = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOC, &GPIO_InitStructure2);
+	
+	//Timer 3 set up
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+	
+	TIM_TimeBaseInitTypeDef timerInitStructure2;
+	timerInitStructure2.TIM_Prescaler = 18000-1; //1/(72Mhz/18000)=0.25ms
+	timerInitStructure2.TIM_CounterMode = TIM_CounterMode_Up;
+	timerInitStructure2.TIM_Period = 500-1; //0.25ms*500 = 0.125s
+	timerInitStructure2.TIM_ClockDivision = 0; //TIM_CKD_DIV1;
+	timerInitStructure2.TIM_RepetitionCounter = 0;
+	TIM_TimeBaseInit(TIM3, &timerInitStructure2);
+	TIM_Cmd(TIM3, ENABLE);
+	
+	//Enable update event, interrupt for Timer3
+	TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+	NVIC_EnableIRQ(TIM3_IRQn);
+	
+	while(1);
+}
+
+char state = 0;
+char timewait = 0;
+char mode = 1;
+
+void TIM3_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET) 
+	{
+		state++;
+		if(mode == 0)
+		{
+			if(state == 1) //state 1
+			{
+				GPIO_WriteBit(GPIOC, GPIO_Pin_0, Bit_SET);
+				GPIO_WriteBit(GPIOC, GPIO_Pin_1, Bit_SET);
+			}
+			else if(state == 8) 
+			{
+				GPIO_WriteBit(GPIOC, GPIO_Pin_0, Bit_RESET);
+				GPIO_WriteBit(GPIOC, GPIO_Pin_1, Bit_RESET);
+			}
+			else if(state >= 16)
+			{
+				state = 0;
+				//Rerun
+			}
+		}
+		else if(mode == 1)
+		{
+			if(state == 1) //state 1
+			{
+				GPIO_WriteBit(GPIOC, GPIO_Pin_0, Bit_SET);
+				GPIO_WriteBit(GPIOC, GPIO_Pin_1, Bit_RESET);
+			}
+			else if(state == 4) //state 1
+			{
+				GPIO_WriteBit(GPIOC, GPIO_Pin_0, Bit_RESET);
+				GPIO_WriteBit(GPIOC, GPIO_Pin_1, Bit_SET);
+			}
+			else if(state >= 8)
+			{
+				state = 0;
+				//Rerun
+			}
+		}
+		
+		TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
+	}
+}
+
+
+void TIM2_IRQHandler(void)
+{
+	if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+	{
+		if(mode == 0)
+		{
+			mode = 1;
+		}
+		else
+		{
+			mode = 0;
+		}
+		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+	}
+}

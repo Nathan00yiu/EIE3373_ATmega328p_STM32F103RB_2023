@@ -1,0 +1,147 @@
+/*
+ * Lab3B.c
+ *
+ * Created: 1/11/2023 10:49:23 am
+ * Author : 21093734d
+ */ 
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+unsigned int counter = 0;
+unsigned int timer1 = 0;
+unsigned int state = 1;
+unsigned int wait5 = 0;
+int main(void)
+{
+	DDRB = 0xFF; //enable port b as output
+    DDRC = 0xFF;
+	OCR1A = 100; //set OCR1A = 50 (tested 100 work better)
+	TCCR1A = 0x00; //Timer1 = CTC mode
+	TCCR1B = 0x0C; //set timer1 CTC mode, per-scaler = 1024
+	TIMSK1 = (1<<OCIE1A); //enable timer1 CTC interrupt, using OCR1A
+	EICRA = 0x02; //ISC01, ISC00 = 10 INT0 = falling edge (External interrupt)
+	EIMSK = 0x01; //Enable INT0 fact (External interrupt)
+	sei();  //SREG I flag set
+    while (1) 
+    {
+    }
+}
+ISR (INT0_vect)
+{
+	counter++;
+	if(counter == 4)
+	{
+		PORTC ^= 0x01;
+		counter = 0;
+	}	
+}
+ISR (TIMER1_COMPA_vect)
+{
+	if(timer1 == 600)
+	{
+		if(state == 1)
+		{
+			timer1 = 0;
+			PORTC &= 0x01;
+			PORTB = 0x00;
+			PORTC ^= 0x10;
+			PORTB ^= 0x21;
+			state = 2;
+		}
+		else if (state == 2)
+		{
+			timer1 = 0;
+			if(wait5 != 5)
+			{
+				wait5++;
+			}
+			else if(wait5 == 5)
+			{
+				PORTC &= 0x01;
+				PORTB = 0x00;
+				PORTC ^= 0x10;
+				PORTB ^= 0x11;
+				state = 3;
+				wait5 = 0;
+			}
+		}
+		else if (state == 3)
+		{
+			timer1 = 0;
+			PORTC &= 0x01;
+			PORTB = 0x00;
+			PORTC ^= 0x10;
+			PORTB ^= 0x09;
+			state = 4;
+		}
+		else if (state == 4)
+		{
+			timer1 = 0;
+			PORTC &= 0x01;
+			PORTB = 0x00;
+			PORTC ^= 0x10;
+			PORTB ^= 0x0B;
+			state = 5;
+		}
+		else if (state == 5)
+		{
+			timer1 = 0;
+			PORTC &= 0x01;
+			PORTB = 0x00;
+			PORTC ^= 0x20;
+			PORTB ^= 0x0C;
+			state = 6;
+			wait5 = 0;
+			
+		}
+		else if (state == 6)
+		{
+			timer1 = 0;
+			if(wait5 != 5)
+			{
+				wait5++;
+			}
+			else if(wait5 == 5)
+			{
+				state = 7;
+				PORTC &= 0x01;
+				PORTB = 0x00;
+				PORTB ^= 0x0A;
+				for(int i = 0; i < 16; i++)
+				{
+					PORTC = PORTC ^ 0x20;
+					for(int j = 0; j < 10000; j++)
+					{
+						OCR2A = 100; //set OCR2A = 100, count 100 times //use timer2
+						TCCR2A = 0x02; //set CTC mode
+						TCCR2B = 0x01; //set no pre-scaler
+						while((TIFR2&(1<<OCF2A))==0); //when OCF2A overflow, reset
+						TCCR2A = 0;
+						TIFR2 = 0x02;
+					}
+				}
+				wait5 = 0;
+			}
+		}
+		else if (state == 7)
+		{
+			timer1 = 0;
+			PORTC &= 0x01;
+			PORTB = 0x00;
+			PORTC ^= 0x10;
+			PORTB ^= 0x09;
+			state = 8;
+		}
+		else if (state == 8)
+		{
+			timer1 = 0;
+			PORTC &= 0x01;
+			PORTB = 0x00;
+			PORTC ^= 0x10;
+			PORTB ^= 0x19;
+			state = 1;
+		}
+	}
+	timer1++;
+}

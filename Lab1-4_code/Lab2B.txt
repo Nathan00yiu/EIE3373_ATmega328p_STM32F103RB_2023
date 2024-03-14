@@ -1,0 +1,109 @@
+/*
+ * Lab2B.c
+ *
+ * Created: 11/10/2023 5:02:23 pm
+ * Author : 21093734d
+ */ 
+
+#include <avr/io.h>
+
+void delay1s()
+{
+	for(int i = 0; i < 4; i++)
+	{
+		for(int j=0; j<15625;j++)
+		{
+			TCNT0 = 0x00; //set TCNt0 to 0, counter start count from 0 to 256
+			TCCR0A = 0x00; //set normal mode
+			TCCR0B = 0x01; //set no pre-scaler
+			while((TIFR0&(1<<TOV0))==0); //when overflow (TOV0 = 1) stop wait
+			TCCR0B = 0;
+			TIFR0 = (1<<TOV0); //Set value in TOV0 into 0
+		}	
+	}
+}
+void state1()
+{
+	PORTC = 0x10;
+	PORTB = 0x21;
+}
+void state2()
+{
+	PORTC = 0x10;
+	PORTB = 0x11;
+}
+void state3()
+{
+	PORTC = 0x10;
+	PORTB = 0x09;
+}
+void state4()
+{
+	PORTC = 0x10;
+	PORTB = 0x0B;
+}
+void state5()
+{
+	PORTC = 0x20;
+	PORTB = 0x0C;
+}
+void state6()
+{
+	for(int i = 0; i < 4; i++)
+	{
+		PORTB = 0x0A;
+		PORTC = PORTC ^ 0x20;
+		for(int j=0; j<15625;j++)
+		{
+			TCNT0 = 0x00; //set TCNt0 to 0, counter start count from 0 to 256
+			TCCR0A = 0x00; //set normal mode
+			TCCR0B = 0x01; //set no pre-scaler
+			while((TIFR0&(1<<TOV0))==0); //when overflow (TOV0 = 1) stop wait
+			TCCR0B = 0;
+			TIFR0 = (1<<TOV0); //Set value in TOV0 into 0
+		}	
+	}
+}
+void state7()
+{
+	PORTC = 0x10;
+	PORTB = 0x09;
+}
+void state8()
+{
+	PORTC = 0x10;
+	PORTB = 0x19;
+}
+int main(void)
+{
+    DDRB = 0xFF;
+	DDRC = 0xFF;
+    PORTB &= ~(1<<0);
+    while (1)
+    {
+		state1();
+		for(int i = 0; i < 5; i++)
+		{
+			delay1s();	
+		}
+		state2();
+		delay1s();
+		state3();
+		delay1s();
+		state4();
+		delay1s();
+		state5();
+		for(int i = 0; i < 5; i++)
+		{
+			delay1s();
+		}
+		state6();
+		delay1s();
+		state7();
+		delay1s();
+		state8();
+		delay1s();
+	    //PORTB = PORTB^(1<<0);
+	}
+}
+

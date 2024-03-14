@@ -1,0 +1,76 @@
+/*
+ * Lab4D_1.c
+ *
+ * Created: 16/11/2023 10:33:45 am
+ * Author : 21093734d
+ */ 
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+unsigned char sayhi[4] = "Bye!";
+unsigned char hilength = 4;
+unsigned char hicheck = 0;
+unsigned char sayready[13] = "We are Ready ";
+unsigned char readylength = 13;
+unsigned char readycheck = 0;
+unsigned char input = 0;
+unsigned char i = 0;
+unsigned char secondinput = 0;
+unsigned char start = 0;
+
+ISR(USART_RX_vect)
+{
+	input = UDR0;
+	if(input != 'i')
+	{
+		secondinput = input;
+	}
+	else if(secondinput =='H')
+	{
+		hicheck = 1;
+	}
+}
+ISR(USART_UDRE_vect)
+{
+	//send ready done
+	if(readycheck == 0)
+	{
+		UDR0 = sayready[i];
+		i++;
+		if(i > readylength)
+		{
+			readycheck = 1;
+			i = 0;
+		}
+	}
+	else if(hicheck == 1)
+	{
+		UDR0 = sayhi[i];
+		i++;
+		if(i > hilength)
+		{
+			hicheck = 0;
+			i = 0;
+		}
+	}
+}
+void USART_Init(void)
+{
+	/*Set baud rate */
+	UBRR0H = 0x00; //set baud rate
+	UBRR0L = 0xCF; //set baud rate = 4800
+	/*Enable receiver and transmitter */
+	UCSR0B = (1<<RXEN0)|(1<<RXCIE0)|(1<<TXEN0)|(1<<UDRIE0); //receive enable, RXC interrupt enable
+	/* Set frame format: 8data, 2stop bit */
+	UCSR0C = (0<<USBS0)|(3<<UCSZ00); //1 stop bits, character size = 8 bits
+}
+int main(void)
+{
+    /* Replace with your application code */
+	USART_Init();
+	sei();
+    while (1);
+	return 0;
+}
+

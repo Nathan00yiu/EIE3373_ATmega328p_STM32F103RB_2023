@@ -1,0 +1,42 @@
+/*
+ * Lab1B.c
+ *
+ * Created: 21/9/2023 10:02:35 am
+ * Author : 
+ */ 
+
+#include <avr/io.h>
+
+void delay100ms (void)
+{
+	unsigned int i;
+	for (i = 0; i <42150; i++);
+}
+int main(void)
+{
+	//lab1b state = 0;
+	DDRD = 0xFF; //enable Port D as output
+	PORTD = 0x00; //Port D = 0000 0000
+    /* Replace with your application code */
+	int state = 0;
+    while (1) 
+    {
+		if (PINB & (1 << 0) && state == 0) // check if PB0 = 1 or not. And if switch that connect on PB0 is triggered
+		{
+			PORTD = 0xFF;
+			state = 1;
+		}			
+		if (PINB & (1 << 0) && state == 1) // check if PB0 = 1 or not.
+		{
+			PORTD = 0x00;
+			state = 0;
+		}
+		/*if(lab1b state = 1 &&)
+		{
+			state0();
+		}else if()
+		{
+			state1(lab1b state = 0 &&);
+		}*/
+    }
+}
